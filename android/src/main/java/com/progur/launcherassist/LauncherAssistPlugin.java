@@ -50,6 +50,8 @@ public class LauncherAssistPlugin implements MethodCallHandler {
           getAllApps(result);
       } else if(methodCall.method.equals("launchApp")) {
           launchApp(methodCall.argument("packageName").toString());
+      } else if(methodCall.method.equals("getUserApps")) {
+          getUserApps(result);
       } else if(methodCall.method.equals("getWallpaper")) {
           getWallpaper(result);
       }
@@ -88,6 +90,7 @@ public class LauncherAssistPlugin implements MethodCallHandler {
 
       Intent intent = new Intent(Intent.ACTION_MAIN, null);
       intent.addCategory(Intent.CATEGORY_LAUNCHER);
+    //intent.addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER); //idk break somethings and doesnt display all apps with it
 
       PackageManager manager = registrar.context().getPackageManager();
       List<ResolveInfo> resList = manager.queryIntentActivities(intent, 0);
@@ -100,13 +103,26 @@ public class LauncherAssistPlugin implements MethodCallHandler {
                       resInfo.activityInfo.packageName, PackageManager.GET_META_DATA);
               if (manager.getLaunchIntentForPackage(app.packageName) != null) {
 
-                  byte[] iconData = convertToBytes(getBitmapFromDrawable(app.loadIcon(manager)),
-                          Bitmap.CompressFormat.PNG, 100);
-
                   Map<String, Object> current = new HashMap<>();
+
                   current.put("label", app.loadLabel(manager).toString());
-                  current.put("icon", iconData);
                   current.put("package", app.packageName);
+
+
+                  Drawable loadIcon = app.loadIcon(manager);
+                  Drawable loadBanner = app.loadBanner(manager);
+
+                  if(loadIcon != null) {
+                      byte[] iconData = convertToBytes(getBitmapFromDrawable(loadIcon),
+                              Bitmap.CompressFormat.PNG, 100);
+                      current.put("icon", iconData);
+                  }
+                  if(loadBanner != null) {
+                      byte[] bannerData = convertToBytes(getBitmapFromDrawable(loadBanner),
+                              Bitmap.CompressFormat.PNG, 100);
+                      current.put("banner", bannerData);
+                  }
+
                   _output.add(current);
               }
           } catch(Exception e) {
@@ -116,6 +132,59 @@ public class LauncherAssistPlugin implements MethodCallHandler {
 
       result.success(_output);
   }
+
+    private void getUserApps(MethodChannel.Result result) {
+
+        Intent intent = new Intent(Intent.ACTION_MAIN, null);
+        intent.addCategory(Intent.CATEGORY_LAUNCHER);
+        //intent.addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER);
+
+        PackageManager manager = registrar.context().getPackageManager();
+        List<ResolveInfo> resList = manager.queryIntentActivities(intent, 0);
+
+        List<Map<String, Object>> _output = new ArrayList<>();
+
+        for (ResolveInfo resInfo : resList) {
+            try {
+                ApplicationInfo app = manager.getApplicationInfo(
+                        resInfo.activityInfo.packageName, PackageManager.GET_META_DATA);
+                if (manager.getLaunchIntentForPackage(app.packageName) != null) {
+
+                    if (app.flags != 1) {
+                        Map<String, Object> current = new HashMap<>();
+
+                        current.put("label", app.loadLabel(manager).toString());
+                        current.put("package", app.packageName);
+
+
+                        Drawable loadIcon = app.loadIcon(manager);
+                        Drawable loadBanner = app.loadBanner(manager);
+
+                        if(loadIcon != null) {
+                            byte[] iconData = convertToBytes(getBitmapFromDrawable(loadIcon),
+                                    Bitmap.CompressFormat.PNG, 100);
+                            current.put("icon", iconData);
+                        }
+                        if(loadBanner != null) {
+                            byte[] bannerData = convertToBytes(getBitmapFromDrawable(loadBanner),
+                                    Bitmap.CompressFormat.PNG, 100);
+                            current.put("banner", bannerData);
+                        }
+
+
+                        _output.add(current);
+                    }
+
+
+                }
+            } catch(Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        result.success(_output);
+    }
+
 
   public static byte[] convertToBytes(Bitmap image, Bitmap.CompressFormat compressFormat, int quality) {
     ByteArrayOutputStream byteArrayOS = new ByteArrayOutputStream();
