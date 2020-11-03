@@ -27,10 +27,7 @@ class LauncherAssist {
   static getAllApps() async {
     List<dynamic> methodData = await _channel.invokeMethod('getAllApps');
     List<App> apps = new List<App>();
-    methodData.forEach((app) {
-      print(app['package']);
-      apps.add(App.fromMap(app));
-    });
+    methodData.forEach((app) => apps.add(App.fromMap(app)));
     return apps;
   }
 
